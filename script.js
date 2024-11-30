@@ -15,15 +15,16 @@ const canvas = document.getElementById('gameCanvas');
         let gameLoop;
         let gameStarted = false;
         let lastRenderTime = 0;
-        let SNAKE_SPEED = 10; // Moves per second
+        let SNAKE_SPEED = 7; // Moves per second
         let specialFood = null;
         let activeEffect = null;
         let effectDuration = 0;
         let portalPair = [];
+        let obstacles = [];
 
         const EFFECTS = {
-            FRENZY: { color: '#00f', duration: 5000, apply: () => SNAKE_SPEED = 20 },
-            SLOW: { color: '#800080', duration: 5000, apply: () => SNAKE_SPEED = 5 },
+            FRENZY: { color: '#00f', duration: 5000, apply: () => SNAKE_SPEED = 17 },
+            SLOW: { color: '#800080', duration: 5000, apply: () => SNAKE_SPEED = 3 },
             REVERSE: { color: '#ffa500', duration: 5000, apply: () => [dx, dy] = [-dx, -dy] },
             GROWTH: { color: '#ff69b4', duration: 0, apply: () => growSnake(3) }
         };
@@ -139,6 +140,8 @@ const canvas = document.getElementById('gameCanvas');
             if (specialFood) drawSpecialFood();
             drawSnake();
             if (portalPair.length === 2) drawPortals();
+            drawObstacles();
+            if (portalPair.length === 2) drawPortals();
         }
 
         function clearCanvas() {
@@ -181,6 +184,10 @@ const canvas = document.getElementById('gameCanvas');
                 if (head.x === snake[i].x && head.y === snake[i].y) {
                     gameOver();
                 }
+            }
+            if (isOnObstacle(head)) {
+                gameOver();
+                return;
             }
         }
 
@@ -299,8 +306,10 @@ const canvas = document.getElementById('gameCanvas');
             effectDuration = 0;
             specialFood = null;
             portalPair = [];
+            obstacles = [];
             setBackgroundColor(getRandomDarkColor());
             spawnFood();
+            spawnObstacles(); // Génération des obstacles
             gameStarted = true;
             startScreen.style.display = 'none';
             gameOverScreen.style.display = 'none';
@@ -308,7 +317,41 @@ const canvas = document.getElementById('gameCanvas');
             lastRenderTime = 0;
             playSound(sounds.start);
             window.requestAnimationFrame(gameStep);
+        }      
+
+        function spawnObstacles(){
+            const numObstacles = Math.floor(Math.random() * 5) + 3;
+            obstacles = [];
+
+            for (let i = 0; i < numObstacles; i++) {
+                let obstacle;
+                do {
+                    obstacle = {
+                        x: Math.floor(Math.random() * tileCount),
+                        y: Math.floor(Math.random() * tileCount)
+                    };
+                } while (isOnSnake(obstacle) || isOnFood(obstacle) || isOnSpecialFood(obstacle) || isOnPortal(obstacle));
+
+                obstacles.push(obstacle);
+            }
         }
+
+        function drawObstacles() {
+            ctx.fillStyle = '#800';
+            obstacles.forEach(obstacle => {
+                ctx.fillRect(obstacle.x * tileSize, obstacle.y * tileSize, tileSize, tileSize);
+            });
+        }
+
+        function isOnObstacle(pos) {
+            return obstacles.some(obstacle => obstacle.x === pos.x && obstacle.y === pos.y);
+        }
+
+        function isOnPortal(pos) {
+            return portalPair.some(portal => portal.x === pos.x && portal.y === pos.y);
+        }
+
+
 
         document.addEventListener('keydown', (e) => {
             if (!gameStarted && e.code === 'Space') {
