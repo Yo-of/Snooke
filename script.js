@@ -232,13 +232,13 @@ function isOnSnake(pos) {
     return snake.some(segment => segment.x === pos.x && segment.y === pos.y);
 }
 
-        function isOnFood(pos) {
-            return pos.x === food.x && pos.y === food.y;
-        }
+function isOnFood(pos) {
+    return pos.x === food.x && pos.y === food.y;
+}
 
-        function isOnSpecialFood(pos) {
-            return specialFood && pos.x === specialFood.x && pos.y === specialFood.y;
-        }
+function isOnSpecialFood(pos) {
+    return specialFood && pos.x === specialFood.x && pos.y === specialFood.y;
+}
 
         function applyEffect(effect) {
             activeEffect = effect;
