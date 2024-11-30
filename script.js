@@ -15,7 +15,7 @@ const canvas = document.getElementById('gameCanvas');
         let gameLoop;
         let gameStarted = false;
         let lastRenderTime = 0;
-        let SNAKE_SPEED = 7; // Moves per second
+        let SNAKE_SPEED = 7;
         let specialFood = null;
         let activeEffect = null;
         let effectDuration = 0;
@@ -29,14 +29,12 @@ const canvas = document.getElementById('gameCanvas');
             GROWTH: { color: '#ff69b4', duration: 0, apply: () => growSnake(3) }
         };
 
-        // Audio context and sounds
         let audioContext;
         let sounds = {};
 
         function initAudio() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             
-            // Create oscillator-based sounds
             sounds.eat = createBeepSound(600, 0.1);
             sounds.gameOver = createBeepSound(200, 0.3);
             sounds.start = createBeepSound(440, 0.2);
@@ -121,7 +119,6 @@ const canvas = document.getElementById('gameCanvas');
                 snake.pop();
             }
 
-            // Check for portal teleportation
             if (portalPair.length === 2) {
                 const [portal1, portal2] = portalPair;
                 if (head.x === portal1.x && head.y === portal1.y) {
@@ -197,11 +194,11 @@ const canvas = document.getElementById('gameCanvas');
                 food.y = Math.floor(Math.random() * tileCount);
             } while (isOnSnake(food));
 
-            if (Math.random() < 0.2) { // 20% chance to spawn special food
+            if (Math.random() < 0.2) {
                 spawnSpecialFood();
             }
 
-            if (Math.random() < 0.1 && portalPair.length === 0) { // 10% chance to spawn portals
+            if (Math.random() < 0.1 && portalPair.length === 0) {
                 spawnPortals();
             }
         }
@@ -254,7 +251,7 @@ const canvas = document.getElementById('gameCanvas');
             if (activeEffect && effectDuration > 0) {
                 effectDuration -= 1000 / SNAKE_SPEED;
                 if (effectDuration <= 0) {
-                    SNAKE_SPEED = 10; // Reset to normal speed
+                    SNAKE_SPEED = 10;
                     activeEffect = null;
                     updateStatusEffect();
                 }
@@ -309,7 +306,7 @@ const canvas = document.getElementById('gameCanvas');
             obstacles = [];
             setBackgroundColor(getRandomDarkColor());
             spawnFood();
-            spawnObstacles(); // Génération des obstacles
+            spawnObstacles();
             gameStarted = true;
             startScreen.style.display = 'none';
             gameOverScreen.style.display = 'none';
