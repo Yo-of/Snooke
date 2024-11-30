@@ -240,139 +240,137 @@ function isOnSpecialFood(pos) {
     return specialFood && pos.x === specialFood.x && pos.y === specialFood.y;
 }
 
-        function applyEffect(effect) {
-            activeEffect = effect;
-            effectDuration = effect.duration;
-            effect.apply();
-            updateStatusEffect();
-        }
+function applyEffect(effect) {
+    activeEffect = effect;
+    effectDuration = effect.duration;
+    effect.apply();
+    updateStatusEffect();
+}
 
-        function updateEffects() {
-            if (activeEffect && effectDuration > 0) {
-                effectDuration -= 1000 / SNAKE_SPEED;
-                if (effectDuration <= 0) {
-                    SNAKE_SPEED = 10;
-                    activeEffect = null;
-                    updateStatusEffect();
-                }
-            }
-        }
-
-        function updateStatusEffect() {
-            if (activeEffect) {
-                const effectName = Object.keys(EFFECTS).find(key => EFFECTS[key] === activeEffect);
-                statusEffectElement.textContent = `${effectName} ACTIVE`;
-                statusEffectElement.style.color = activeEffect.color;
-            } else {
-                statusEffectElement.textContent = '';
-            }
-        }
-
-        function growSnake(amount) {
-            for (let i = 0; i < amount; i++) {
-                snake.push({...snake[snake.length - 1]});
-            }
-        }
-
-        function gameOver() {
-            gameStarted = false;
-            finalScoreElement.textContent = score;
-            gameOverScreen.style.display = 'block';
-            playSound(sounds.gameOver);
-        }
-
-        function getRandomDarkColor() {
-            const r = Math.floor(Math.random() * 128);
-            const g = Math.floor(Math.random() * 128);
-            const b = Math.floor(Math.random() * 128);
-            return `rgb(${r}, ${g}, ${b})`;
-        }
-
-        function setBackgroundColor(color) {
-            document.documentElement.style.setProperty('--bg-color', color);
-        }
-
-        function startGame() {
-            snake = [{x: 8, y: 8}];
-            dx = 1;
-            dy = 0;
-            score = 0;
-            scoreElement.textContent = score;
+function updateEffects() {
+    if (activeEffect && effectDuration > 0) {
+        effectDuration -= 1000 / SNAKE_SPEED;
+        if (effectDuration <= 0) {
             SNAKE_SPEED = 10;
             activeEffect = null;
-            effectDuration = 0;
-            specialFood = null;
-            portalPair = [];
-            obstacles = [];
-            setBackgroundColor(getRandomDarkColor());
-            spawnFood();
-            spawnObstacles();
-            gameStarted = true;
-            startScreen.style.display = 'none';
-            gameOverScreen.style.display = 'none';
-            statusEffectElement.textContent = '';
-            lastRenderTime = 0;
-            playSound(sounds.start);
-            window.requestAnimationFrame(gameStep);
-        }      
-
-        function spawnObstacles(){
-            const numObstacles = Math.floor(Math.random() * 5) + 3;
-            obstacles = [];
-
-            for (let i = 0; i < numObstacles; i++) {
-                let obstacle;
-                do {
-                    obstacle = {
-                        x: Math.floor(Math.random() * tileCount),
-                        y: Math.floor(Math.random() * tileCount)
-                    };
-                } while (isOnSnake(obstacle) || isOnFood(obstacle) || isOnSpecialFood(obstacle) || isOnPortal(obstacle));
-
-                obstacles.push(obstacle);
-            }
+            updateStatusEffect();
         }
+    }
+}
 
-        function drawObstacles() {
-            ctx.fillStyle = '#800';
-            obstacles.forEach(obstacle => {
-                ctx.fillRect(obstacle.x * tileSize, obstacle.y * tileSize, tileSize, tileSize);
-            });
+function updateStatusEffect() {
+    if (activeEffect) {
+        const effectName = Object.keys(EFFECTS).find(key => EFFECTS[key] === activeEffect);
+        statusEffectElement.textContent = `${effectName} ACTIVE`;
+        statusEffectElement.style.color = activeEffect.color;
+    } else {
+        statusEffectElement.textContent = '';
+    }
+}
+
+function growSnake(amount) {
+    for (let i = 0; i < amount; i++) {
+        snake.push({...snake[snake.length - 1]});
+    }
+}
+
+function gameOver() {
+    gameStarted = false;
+    finalScoreElement.textContent = score;
+    gameOverScreen.style.display = 'block';
+    playSound(sounds.gameOver);
+}
+
+function getRandomDarkColor() {
+    const r = Math.floor(Math.random() * 128);
+    const g = Math.floor(Math.random() * 128);
+    const b = Math.floor(Math.random() * 128);
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function setBackgroundColor(color) {
+    document.documentElement.style.setProperty('--bg-color', color);
+}
+
+function startGame() {
+    snake = [{x: 8, y: 8}];
+    dx = 1;
+    dy = 0;
+    score = 0;
+    scoreElement.textContent = score;
+    SNAKE_SPEED = 10;
+    activeEffect = null;
+    effectDuration = 0;
+    specialFood = null;
+    portalPair = [];
+    obstacles = [];
+    setBackgroundColor(getRandomDarkColor());
+    spawnFood();
+    spawnObstacles();
+    gameStarted = true;
+    startScreen.style.display = 'none';
+    gameOverScreen.style.display = 'none';
+    statusEffectElement.textContent = '';
+    lastRenderTime = 0;
+    playSound(sounds.start);
+    window.requestAnimationFrame(gameStep);
+}      
+
+function spawnObstacles(){
+    const numObstacles = Math.floor(Math.random() * 5) + 3;
+    obstacles = [];
+
+    for (let i = 0; i < numObstacles; i++) {
+        let obstacle;
+        do {
+            obstacle = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+        } while (isOnSnake(obstacle) || isOnFood(obstacle) || isOnSpecialFood(obstacle) || isOnPortal(obstacle));
+
+        obstacles.push(obstacle);
+    }
+}
+
+function drawObstacles() {
+    ctx.fillStyle = '#800';
+    obstacles.forEach(obstacle => {
+        ctx.fillRect(obstacle.x * tileSize, obstacle.y * tileSize, tileSize, tileSize);
+    });
+}
+
+function isOnObstacle(pos) {
+    return obstacles.some(obstacle => obstacle.x === pos.x && obstacle.y === pos.y);
+}
+
+function isOnPortal(pos) {
+    return portalPair.some(portal => portal.x === pos.x && portal.y === pos.y);
+}
+
+document.addEventListener('keydown', (e) => {
+    if (!gameStarted && e.code === 'Space') {
+        startGame();
+    } else if (gameStarted) {
+        switch (e.code) {
+            case 'ArrowUp':
+                if (dy === 0) { dx = 0; dy = -1; }
+                break;
+            case 'ArrowDown':
+                if (dy === 0) { dx = 0; dy = 1; }
+                break;
+            case 'ArrowLeft':
+                if (dx === 0) { dx = -1; dy = 0; }
+                break;
+            case 'ArrowRight':
+                if (dx === 0) { dx = 1; dy = 0; }
+                break;
         }
+    }
+});
 
-        function isOnObstacle(pos) {
-            return obstacles.some(obstacle => obstacle.x === pos.x && obstacle.y === pos.y);
-        }
-
-        function isOnPortal(pos) {
-            return portalPair.some(portal => portal.x === pos.x && portal.y === pos.y);
-        }
-
-
-
-        document.addEventListener('keydown', (e) => {
-            if (!gameStarted && e.code === 'Space') {
-                startGame();
-            } else if (gameStarted) {
-                switch (e.code) {
-                    case 'ArrowUp':
-                        if (dy === 0) { dx = 0; dy = -1; }
-                        break;
-                    case 'ArrowDown':
-                        if (dy === 0) { dx = 0; dy = 1; }
-                        break;
-                    case 'ArrowLeft':
-                        if (dx === 0) { dx = -1; dy = 0; }
-                        break;
-                    case 'ArrowRight':
-                        if (dx === 0) { dx = 1; dy = 0; }
-                        break;
-                }
-            }
-        });
-
-        window.addEventListener('resize', resizeGame);
-        window.addEventListener('load', () => {
-            initAudio();
-            resizeGame();
-        });
+window.addEventListener('resize', resizeGame);
+window.addEventListener('load', () => {
+    initAudio();
+    resizeGame();
+});
