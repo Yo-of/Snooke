@@ -1,236 +1,236 @@
 const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('scoreValue');
-        const startScreen = document.getElementById('startScreen');
-        const gameOverScreen = document.getElementById('gameOverScreen');
-        const finalScoreElement = document.getElementById('finalScore');
-        const statusEffectElement = document.getElementById('statusEffect');
+const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('scoreValue');
+const startScreen = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScoreElement = document.getElementById('finalScore');
+const statusEffectElement = document.getElementById('statusEffect');
 
-        let tileSize, tileCount;
-        let snake = [{x: 8, y: 8}];
-        let food = {x: 12, y: 12};
-        let dx = 1;
-        let dy = 0;
-        let score = 0;
-        let gameLoop;
-        let gameStarted = false;
-        let lastRenderTime = 0;
-        let SNAKE_SPEED = 7;
-        let specialFood = null;
-        let activeEffect = null;
-        let effectDuration = 0;
-        let portalPair = [];
-        let obstacles = [];
+let tileSize, tileCount;
+let snake = [{x: 8, y: 8}];
+let food = {x: 12, y: 12};
+let dx = 1;
+let dy = 0;
+let score = 0;
+let gameLoop;
+let gameStarted = false;
+let lastRenderTime = 0;
+let SNAKE_SPEED = 7;
+let specialFood = null;
+let activeEffect = null;
+let effectDuration = 0;
+let portalPair = [];
+let obstacles = [];
 
-        const EFFECTS = {
-            FRENZY: { color: '#00f', duration: 5000, apply: () => SNAKE_SPEED = 17 },
-            SLOW: { color: '#800080', duration: 5000, apply: () => SNAKE_SPEED = 3 },
-            REVERSE: { color: '#ffa500', duration: 5000, apply: () => [dx, dy] = [-dx, -dy] },
-            GROWTH: { color: '#ff69b4', duration: 0, apply: () => growSnake(3) }
+const EFFECTS = {
+    FRENZY: { color: '#00f', duration: 5000, apply: () => SNAKE_SPEED = 17 },
+    SLOW: { color: '#800080', duration: 5000, apply: () => SNAKE_SPEED = 3 },
+    REVERSE: { color: '#ffa500', duration: 5000, apply: () => [dx, dy] = [-dx, -dy] },
+    GROWTH: { color: '#ff69b4', duration: 0, apply: () => growSnake(3) }
+};
+
+let audioContext;
+let sounds = {};
+
+function initAudio() {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+    sounds.eat = createBeepSound(600, 0.1);
+    sounds.gameOver = createBeepSound(200, 0.3);
+    sounds.start = createBeepSound(440, 0.2);
+    sounds.specialFood = createBeepSound(800, 0.15);
+    sounds.portal = createBeepSound(1000, 0.1);
+}
+
+function createBeepSound(frequency, duration) {
+    return () => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+                
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+                
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + duration);
+                
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration);
+    };
+}
+
+function playSound(sound) {
+    if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+    sound();
+}
+
+function resizeGame() {
+    const gameContainer = document.querySelector('.game-container');
+    const containerWidth = gameContainer.clientWidth;
+    const containerHeight = gameContainer.clientHeight;
+    const size = Math.min(containerWidth, containerHeight);
+            
+    canvas.width = size;
+    canvas.height = size;
+            
+    tileCount = 16;
+    tileSize = size / tileCount;
+}
+
+function gameStep(currentTime) {
+    if (gameStarted) {
+        window.requestAnimationFrame(gameStep);
+
+        const secondsSinceLastRender = (currentTime - lastRenderTime) / 1000;
+        if (secondsSinceLastRender < 1 / SNAKE_SPEED) return;
+
+        lastRenderTime = currentTime;
+
+        updateGame();
+        draw();
+    }
+}
+
+function updateGame() {
+    moveSnake();
+    checkCollision();
+    updateEffects();
+}
+
+function moveSnake() {
+    const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        scoreElement.textContent = score;
+        playSound(sounds.eat);
+        spawnFood();
+    } else if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
+        applyEffect(specialFood.effect);
+        specialFood = null;
+        score += 2;
+        scoreElement.textContent = score;
+        playSound(sounds.specialFood);
+    } else {
+        snake.pop();
+    }
+
+    if (portalPair.length === 2) {
+        const [portal1, portal2] = portalPair;
+        if (head.x === portal1.x && head.y === portal1.y) {
+            snake[0] = { x: portal2.x, y: portal2.y };
+            playSound(sounds.portal);
+        } else if (head.x === portal2.x && head.y === portal2.y) {
+            snake[0] = { x: portal1.x, y: portal1.y };
+            playSound(sounds.portal);
+        }
+    }
+}
+
+function draw() {
+    clearCanvas();
+    drawFood();
+    if (specialFood) drawSpecialFood();
+    drawSnake();
+    if (portalPair.length === 2) drawPortals();
+    drawObstacles();
+    if (portalPair.length === 2) drawPortals();
+}
+
+function clearCanvas() {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim() || '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawFood() {
+    ctx.fillStyle = '#ff0';
+    ctx.fillRect(food.x * tileSize, food.y * tileSize, tileSize, tileSize);
+}
+
+function drawSpecialFood() {
+    ctx.fillStyle = specialFood.effect.color;
+    ctx.fillRect(specialFood.x * tileSize, specialFood.y * tileSize, tileSize, tileSize);
+}
+
+function drawSnake() {
+    ctx.fillStyle = '#0f0';
+    snake.forEach(segment => {
+    ctx.fillRect(segment.x * tileSize, segment.y * tileSize, tileSize, tileSize);
+    });
+}
+
+function drawPortals() {
+    ctx.fillStyle = '#fff';
+    portalPair.forEach(portal => {
+        ctx.beginPath();
+        ctx.arc((portal.x + 0.5) * tileSize, (portal.y + 0.5) * tileSize, tileSize / 2, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+}
+
+function checkCollision() {
+    const head = snake[0];
+    if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+        gameOver();
+    }
+    for (let i = 1; i < snake.length; i++) {
+        if (head.x === snake[i].x && head.y === snake[i].y) {
+            gameOver();
+        }
+    }
+    if (isOnObstacle(head)) {
+        gameOver();
+        return;
+    }
+}
+
+function spawnFood() {
+    do {
+        food.x = Math.floor(Math.random() * tileCount);
+        food.y = Math.floor(Math.random() * tileCount);
+    } while (isOnSnake(food));
+
+    if (Math.random() < 0.2) {
+        spawnSpecialFood();
+    }
+
+    if (Math.random() < 0.1 && portalPair.length === 0) {
+        spawnPortals();
+    }
+}
+
+function spawnSpecialFood() {
+    const effects = Object.values(EFFECTS);
+    const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+    do {
+        specialFood = {
+            x: Math.floor(Math.random() * tileCount),
+            y: Math.floor(Math.random() * tileCount),
+            effect: randomEffect
         };
+    } while (isOnSnake(specialFood) || (specialFood.x === food.x && specialFood.y === food.y));
+}
 
-        let audioContext;
-        let sounds = {};
-
-        function initAudio() {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            sounds.eat = createBeepSound(600, 0.1);
-            sounds.gameOver = createBeepSound(200, 0.3);
-            sounds.start = createBeepSound(440, 0.2);
-            sounds.specialFood = createBeepSound(800, 0.15);
-            sounds.portal = createBeepSound(1000, 0.1);
-        }
-
-        function createBeepSound(frequency, duration) {
-            return () => {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.type = 'square';
-                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + duration);
-                
-                oscillator.start();
-                oscillator.stop(audioContext.currentTime + duration);
+function spawnPortals() {
+    for (let i = 0; i < 2; i++) {
+        let portal;
+        do {
+            portal = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
             };
-        }
+        } while (isOnSnake(portal) || isOnFood(portal) || isOnSpecialFood(portal));
+        portalPair.push(portal);
+    }
+}
 
-        function playSound(sound) {
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-            sound();
-        }
-
-        function resizeGame() {
-            const gameContainer = document.querySelector('.game-container');
-            const containerWidth = gameContainer.clientWidth;
-            const containerHeight = gameContainer.clientHeight;
-            const size = Math.min(containerWidth, containerHeight);
-            
-            canvas.width = size;
-            canvas.height = size;
-            
-            tileCount = 16;
-            tileSize = size / tileCount;
-        }
-
-        function gameStep(currentTime) {
-            if (gameStarted) {
-                window.requestAnimationFrame(gameStep);
-
-                const secondsSinceLastRender = (currentTime - lastRenderTime) / 1000;
-                if (secondsSinceLastRender < 1 / SNAKE_SPEED) return;
-
-                lastRenderTime = currentTime;
-
-                updateGame();
-                draw();
-            }
-        }
-
-        function updateGame() {
-            moveSnake();
-            checkCollision();
-            updateEffects();
-        }
-
-        function moveSnake() {
-            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
-            snake.unshift(head);
-
-            if (head.x === food.x && head.y === food.y) {
-                score++;
-                scoreElement.textContent = score;
-                playSound(sounds.eat);
-                spawnFood();
-            } else if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
-                applyEffect(specialFood.effect);
-                specialFood = null;
-                score += 2;
-                scoreElement.textContent = score;
-                playSound(sounds.specialFood);
-            } else {
-                snake.pop();
-            }
-
-            if (portalPair.length === 2) {
-                const [portal1, portal2] = portalPair;
-                if (head.x === portal1.x && head.y === portal1.y) {
-                    snake[0] = { x: portal2.x, y: portal2.y };
-                    playSound(sounds.portal);
-                } else if (head.x === portal2.x && head.y === portal2.y) {
-                    snake[0] = { x: portal1.x, y: portal1.y };
-                    playSound(sounds.portal);
-                }
-            }
-        }
-
-        function draw() {
-            clearCanvas();
-            drawFood();
-            if (specialFood) drawSpecialFood();
-            drawSnake();
-            if (portalPair.length === 2) drawPortals();
-            drawObstacles();
-            if (portalPair.length === 2) drawPortals();
-        }
-
-        function clearCanvas() {
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim() || '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function drawFood() {
-            ctx.fillStyle = '#ff0';
-            ctx.fillRect(food.x * tileSize, food.y * tileSize, tileSize, tileSize);
-        }
-
-        function drawSpecialFood() {
-            ctx.fillStyle = specialFood.effect.color;
-            ctx.fillRect(specialFood.x * tileSize, specialFood.y * tileSize, tileSize, tileSize);
-        }
-
-        function drawSnake() {
-            ctx.fillStyle = '#0f0';
-            snake.forEach(segment => {
-                ctx.fillRect(segment.x * tileSize, segment.y * tileSize, tileSize, tileSize);
-            });
-        }
-
-        function drawPortals() {
-            ctx.fillStyle = '#fff';
-            portalPair.forEach(portal => {
-                ctx.beginPath();
-                ctx.arc((portal.x + 0.5) * tileSize, (portal.y + 0.5) * tileSize, tileSize / 2, 0, 2 * Math.PI);
-                ctx.fill();
-            });
-        }
-
-        function checkCollision() {
-            const head = snake[0];
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
-                gameOver();
-            }
-            for (let i = 1; i < snake.length; i++) {
-                if (head.x === snake[i].x && head.y === snake[i].y) {
-                    gameOver();
-                }
-            }
-            if (isOnObstacle(head)) {
-                gameOver();
-                return;
-            }
-        }
-
-        function spawnFood() {
-            do {
-                food.x = Math.floor(Math.random() * tileCount);
-                food.y = Math.floor(Math.random() * tileCount);
-            } while (isOnSnake(food));
-
-            if (Math.random() < 0.2) {
-                spawnSpecialFood();
-            }
-
-            if (Math.random() < 0.1 && portalPair.length === 0) {
-                spawnPortals();
-            }
-        }
-
-        function spawnSpecialFood() {
-            const effects = Object.values(EFFECTS);
-            const randomEffect = effects[Math.floor(Math.random() * effects.length)];
-            do {
-                specialFood = {
-                    x: Math.floor(Math.random() * tileCount),
-                    y: Math.floor(Math.random() * tileCount),
-                    effect: randomEffect
-                };
-            } while (isOnSnake(specialFood) || (specialFood.x === food.x && specialFood.y === food.y));
-        }
-
-        function spawnPortals() {
-            for (let i = 0; i < 2; i++) {
-                let portal;
-                do {
-                    portal = {
-                        x: Math.floor(Math.random() * tileCount),
-                        y: Math.floor(Math.random() * tileCount)
-                    };
-                } while (isOnSnake(portal) || isOnFood(portal) || isOnSpecialFood(portal));
-                portalPair.push(portal);
-            }
-        }
-
-        function isOnSnake(pos) {
-            return snake.some(segment => segment.x === pos.x && segment.y === pos.y);
-        }
+function isOnSnake(pos) {
+    return snake.some(segment => segment.x === pos.x && segment.y === pos.y);
+}
 
         function isOnFood(pos) {
             return pos.x === food.x && pos.y === food.y;
