@@ -26,11 +26,35 @@ const EFFECTS = {
     FRENZY: { color: '#00f', duration: 5000, apply: () => SNAKE_SPEED = 17 },
     SLOW: { color: '#800080', duration: 5000, apply: () => SNAKE_SPEED = 3 },
     REVERSE: { color: '#ffa500', duration: 5000, apply: () => [dx, dy] = [-dx, -dy] },
-    GROWTH: { color: '#ff69b4', duration: 0, apply: () => growSnake(3) }
+    GROWTH: { color: '#ff69b4', duration: 0, apply: () => growSnake(3) },
+    INVERT_CONTROLS: {
+        color: '#fff',
+        duration: 5000,
+        apply: () => invertControls(true),
+        reset: () => invertControls(false)
+    },
 };
 
 let audioContext;
 let sounds = {};
+
+function invertControls(enable) {
+    invertedControls = enable;
+}
+
+let invertedControls = false;
+
+function updateEffects() {
+    if (activeEffect && effectDuration > 0) {
+        effectDuration -= 1000 / SNAKE_SPEED;
+        if (effectDuration <= 0) {
+            if (activeEffect.reset) activeEffect.reset();
+            SNAKE_SPEED = 10;
+            activeEffect = null;
+            updateStatusEffect();
+        }
+    }
+}
 
 function initAudio() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -352,19 +376,36 @@ document.addEventListener('keydown', (e) => {
     if (!gameStarted && e.code === 'Space') {
         startGame();
     } else if (gameStarted) {
-        switch (e.code) {
-            case 'ArrowUp':
-                if (dy === 0) { dx = 0; dy = -1; }
-                break;
-            case 'ArrowDown':
-                if (dy === 0) { dx = 0; dy = 1; }
-                break;
-            case 'ArrowLeft':
-                if (dx === 0) { dx = -1; dy = 0; }
-                break;
-            case 'ArrowRight':
-                if (dx === 0) { dx = 1; dy = 0; }
-                break;
+        if (invertedControls) {
+            switch (e.code) {
+                case 'ArrowUp':
+                    if (dy === 0) { dx = 0; dy = 1; }
+                    break;
+                case 'ArrowDown':
+                    if (dy === 0) { dx = 0; dy = -1; }
+                    break;
+                case 'ArrowLeft':
+                    if (dx === 0) { dx = 1; dy = 0; }
+                    break;
+                case 'ArrowRight':
+                    if (dx === 0) { dx = -1; dy = 0; }
+                    break;
+            }
+        } else {
+            switch (e.code) {
+                case 'ArrowUp':
+                    if (dy === 0) { dx = 0; dy = -1; }
+                    break;
+                case 'ArrowDown':
+                    if (dy === 0) { dx = 0; dy = 1; }
+                    break;
+                case 'ArrowLeft':
+                    if (dx === 0) { dx = -1; dy = 0; }
+                    break;
+                case 'ArrowRight':
+                    if (dx === 0) { dx = 1; dy = 0; } 
+                    break;
+            }
         }
     }
 });
