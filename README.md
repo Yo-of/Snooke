@@ -1,6 +1,6 @@
 ![alt text](Snooke.png)
 
-An new version of snake with some effect and obstacle 
+A new version of snake with some effect and obstacle 
 
 ## The effects : 
 
